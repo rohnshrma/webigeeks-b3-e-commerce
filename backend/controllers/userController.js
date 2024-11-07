@@ -1,6 +1,7 @@
 import User from "../model/userModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import generateToken from "../utils/generateToken.js";
 // @desc    Auth user & get token
 // @route   POST /api/users/login
 // @access  Public
@@ -20,17 +21,7 @@ const AUTH_USER = async (req, res) => {
       return res.status(401).json({ message: "Incorrect Password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "30d",
-    });
-
-    // set JWT as HTTP-Only Cookie
-    res.cookie("jwt", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: "strict",
-      maxAge: 30 * 24 * 60 * 60 * 1000, //30 days
-    });
+    generateToken(res, user._id);
 
     res.json({
       _id: user._id,
@@ -58,27 +49,15 @@ const REGISTER_USER = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 11);
-
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
       isAdmin: false,
     });
 
     if (user) {
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "30d",
-      });
-
-      // set JWT as HTTP-Only Cookie
-      res.cookie("jwt", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV !== "development",
-        sameSite: "strict",
-        maxAge: 30 * 24 * 60 * 60 * 1000, //30 days
-      });
+      generateToken(res, user._id);
 
       res.status(201).json({
         _id: user._id,
