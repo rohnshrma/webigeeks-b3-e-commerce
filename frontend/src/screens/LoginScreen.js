@@ -15,11 +15,31 @@ const LoginScreen = () => {
 
   const [login, { isLoading, error }] = useLoginMutation();
 
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const { userInfo } = useSelector((state) => state.auth);
 
-  const submitHandler = (e) => {
+  const { search } = useLocation();
+  const sp = new URLSearchParams(search);
+  const redirect = sp.get("redirect") || "/";
+
+  useEffect(() => {
+    if (userInfo) {
+      navigate(redirect);
+    }
+  }, [userInfo, redirect]);
+
+  const submitHandler = async (e) => {
     e.preventDefault();
-    console.log("submitting");
+    try {
+      const res = await login({ email, password }).unwrap();
+      dispatch(setCredentials({ ...res }));
+      console.log(res);
+      navigate(redirect);
+    } catch (error) {
+      toast.error(error.data.message || error.error);
+    }
   };
 
   return (
@@ -49,14 +69,24 @@ const LoginScreen = () => {
           ></Form.Control>
         </Form.Group>
 
-        <Button type="submit" variant="primary" className="my-3">
+        <Button
+          type="submit"
+          variant="primary"
+          className="my-3"
+          disabled={isLoading}
+        >
           Sign In
         </Button>
+
+        {isLoading && <Loader />}
       </Form>
 
       <Row>
         <Col>
-          New Customer ? <Link to="/register">Register</Link>
+          New Customer ?{" "}
+          <Link to={redirect ? `/register?redirect=${redirect}` : `/register`}>
+            Register
+          </Link>
         </Col>
       </Row>
     </FormContainer>
